@@ -21,9 +21,9 @@ fontdata1 = [
 	# 3: Temp
 	[0x4,0x6,0x4,0xD,0x16,0x4,0xE,0xE],
 	# 4: Up
-	[0x0,0x0,0x4,0xA,0x11,0x0,0x0,0x0],
+	[0x4,0xE,0x1F,0x0,0x0,0x0,0x0,0x0],
 	# 5: Down
-	[0x0,0x0,0x11,0xA,0x4,0x0,0x0,0x0],
+	[0x0,0x0,0x0,0x0,0x0,0x1F,0xE,0x4],
 	# 6: degc
 	[0x0,0x12,0x5,0x4,0x4,0x5,0x2,0x0],
 	# 7: pers
@@ -78,13 +78,13 @@ def main():
 			pass
 		if avail_lan:
 			l.lcd_write(0x80+0x00+0x0);	l.lcd_write_char(ICN_LAN)
-			l.lcd_display_string_pos(ip_lan,1,1)
+			l.lcd_display_string_pos(ip_lan+"        ",1,1)
 			netusage_now_down, netusage_now_up = get_network_usage('eth0')
 			print_info(netusage_now_up - netusage_old_up, netusage_now_down - netusage_old_down)
 			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
 		elif avail_wifi:
 			l.lcd_write(0x80+0x00+0x0); l.lcd_write_char(ICN_WIFI)
-			l.lcd_display_string_pos(ip_wifi,1,1)
+			l.lcd_display_string_pos(ip_wifi+"        ",1,1)
 			netusage_now_down, netusage_now_up = get_network_usage('wlan0')
 			print_info(netusage_now_up - netusage_old_up, netusage_now_down - netusage_old_down)
 			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
