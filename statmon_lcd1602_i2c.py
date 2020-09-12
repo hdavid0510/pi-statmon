@@ -93,9 +93,10 @@ def main():
 			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
 		else:
 			l.lcd_write(0x80+0x00+0x0); l.lcd_write_char(ICN_WIFI)
-			l.lcd_display_string_pos("NOCONN",1,1)
+			l.lcd_display_string_pos("NOCONN ",1,1)
 			l.lcd_write(0x80+0x00+0x8); l.lcd_write_char(ICN_LAN)
-			l.lcd_display_string_pos("NOCONN",1,9)
+			l.lcd_display_string_pos("NOCONN ",1,9)
+			l.lcd_display_string_pos("            ",2,4)
 		print_thermal()
 		sleep(REFRESH_DELAY)
 
