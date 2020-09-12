@@ -1,0 +1,10 @@
+[Unit]
+Description=System status monitoring daemon
+
+[Service]
+Type=simple
+ExecStart=%DIR%/statmon_lcd1602_i2c.py
+ExecStop=%DIR%/statmon_lcd1602_i2c_stop.py
+
+[Install]
+WantedBy=multi-user.target

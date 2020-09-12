@@ -50,9 +50,9 @@ def get_network_usage(netinterface='wlan0'):
 
 def print_network_usage(netup,netdown):
 	l.lcd_write(0x80+0x40+0x4); l.lcd_write_char(ICN_UP)
-	l.lcd_display_string_pos('{:4f}'.format((  netup/1024)/REFRESH_DELAY),2, 5)
+	l.lcd_display_string_pos(f'{(  netup/1024)/REFRESH_DELAY:.4f}',2, 5)
 	l.lcd_write(0x80+0x40+0x9); l.lcd_write_char(ICN_DOWN)
-	l.lcd_display_string_pos('{:4f}'.format((netdown/1024)/REFRESH_DELAY),2,10)
+	l.lcd_display_string_pos(f'{(netdown/1024)/REFRESH_DELAY:.4f}',2,10)
 	l.lcd_write(0x80+0x40+0xf); l.lcd_write_char(ICN_PERSEC)
 	l.lcd_display_string_pos("K",2,14)
 
@@ -60,7 +60,7 @@ def print_network_usage(netup,netdown):
 def print_thermal():
 	with open('/sys/class/thermal/thermal_zone0/temp', 'r') as ft:
 		temp = round(int(ft.read())/1000);
-	l.lcd_display_string_pos('{:2d}'.format(temp),2,0)
+	l.lcd_display_string_pos(f'{temp:2d}',2,0)
 	l.lcd_write(0x80+0x40+0x2); l.lcd_write_char(ICN_DEGC)
 
 
@@ -93,9 +93,9 @@ def main():
 			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
 		else:
 			l.lcd_write(0x80+0x00+0x0); l.lcd_write_char(ICN_WIFI)
-			l.lcd_display_string_pos("N/A",1,2)
+			l.lcd_display_string_pos("NOCONN",1,1)
 			l.lcd_write(0x80+0x00+0x8); l.lcd_write_char(ICN_LAN)
-			l.lcd_display_string_pos("N/A",1,10)
+			l.lcd_display_string_pos("NOCONN",1,9)
 		print_thermal()
 		sleep(REFRESH_DELAY)
 
