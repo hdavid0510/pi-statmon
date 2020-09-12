@@ -11,7 +11,7 @@ echotitle(){
 }
 
 
-echotitle "\033[103;30m  Pi Stat Monitor service install  \033[0m"
+echo -e "\033[103;30m  Pi Stat Monitor service install  \033[0m"
 echo -e "Visit https://github.com/hdavid0510/pi-statmon for more information."
 
 
