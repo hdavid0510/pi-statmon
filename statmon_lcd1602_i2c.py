@@ -6,97 +6,123 @@ import netifaces as ni
 import psutil
 import os
 
-REFRESH_DELAY = 2.0
+REFRESH_DELAY = 1.5
+CYCLE_CLOCK = 4
+CYCLE_IP = 7
+CYCLE_END = 7
 
 l = RPi_I2C_driver.lcd(0x27,16,2)
 l.lcd_clear()
 
 fontdata1 = [
-	# 0: ROS
-	[0x0,0x15,0x0,0x15,0x0,0x15,0x0,0x0],
+	# 0: Clock
+	[0x00,0x0E,0x1B,0x1B,0x19,0x1F,0x0E,0x00],
 	# 1: LAN
-	[0x0,0x1F,0x11,0x11,0x1B,0xE,0x0,0x0],
+	[0x00,0x1F,0x11,0x11,0x11,0x1B,0x0E,0x00],
 	# 2: WiFi
-	[0x0,0xE,0x11,0x4,0xA,0x0,0x4,0x0],
+	[0x00,0x0E,0x11,0x04,0x0A,0x00,0x04,0x00],
 	# 3: Temp
-	[0x4,0x6,0x4,0xD,0x16,0x4,0xE,0xE],
+	[0x04,0x06,0x04,0x0D,0x16,0x04,0x0E,0x0E],
 	# 4: Up
-	[0x4,0xE,0x1F,0x0,0x0,0x0,0x0,0x0],
+	[0x04,0x0E,0x1F,0x00,0x08,0x0A,0x0C,0x0A],
 	# 5: Down
-	[0x0,0x0,0x0,0x0,0x0,0x1F,0xE,0x4],
+	[0x08,0x0A,0x0C,0x0A,0x00,0x1F,0x0E,0x04],
 	# 6: degc
-	[0x0,0x12,0x5,0x4,0x4,0x5,0x2,0x0],
-	# 7: pers
-	[0x4,0x4,0x8,0xB,0x14,0x12,0x1,0x6]
+	[0x00,0x10,0x00,0x0C,0x10,0x10,0x0C,0x00],
+	# 7: WiFi2
+	[0x1F,0x11,0x0E,0x1B,0x15,0x1F,0x1B,0x1F]
 ]
 l.lcd_load_custom_chars(fontdata1)
-ICN_ROS		= 0
-ICN_LAN		= 1
-ICN_WIFI	= 2
-ICN_TEMP	= 3
-ICN_UP		= 4
-ICN_DOWN	= 5
-ICN_DEGC	= 6
-ICN_PERSEC	= 7
+ID_CLOCK	= 0
+ID_LAN		= 1
+ID_WIFI		= 2
+ID_TEMP		= 3
+ID_UP		= 4
+ID_DOWN		= 5
+ID_DEGC		= 6
+ID_WUSB		= 7
+LCD_LINE	= [0x80+0x00, 0x80+0x40]
+
+
+tx_old = 0
+rx_old = 0
+
+
+def get_network_avail(netinterface):
+	try:
+		return ni.ifaddresses(netinterface)[ni.AF_INET][0]['addr']
+	except:
+		return None
 
 
 def get_network_usage(netinterface='wlan0'):
-	rx_bytes = open('/sys/class/net/'+netinterface+'/statistics/rx_bytes','r')
+	global tx_old
+	global rx_old
 	tx_bytes = open('/sys/class/net/'+netinterface+'/statistics/tx_bytes','r')
-	rx = float(rx_bytes.read().rstrip())
-	tx = float(tx_bytes.read().rstrip())
-	return (rx, tx)
+	rx_bytes = open('/sys/class/net/'+netinterface+'/statistics/rx_bytes','r')
+	tx_now, rx_now = float(tx_bytes.read().rstrip()), float(rx_bytes.read().rstrip())
+	tx, rx = (tx_now-tx_old), (rx_now-rx_old)
+	tx_old, rx_old = tx_now, rx_now
+	return (tx, rx)
+
+def print_network_ip(netinterface, ip):
+	l.lcd_write(LCD_LINE[0]+0); l.lcd_write_char(netinterface)
+	l.lcd_display_string_pos(ip+"        ",1,1)
 
 
-def print_network_usage(netup,netdown):
-	l.lcd_write(0x80+0x40+0x4); l.lcd_write_char(ICN_UP)
-	l.lcd_display_string_pos(f'{(  netup/1024)/REFRESH_DELAY:.4f}',2, 5)
-	l.lcd_write(0x80+0x40+0x9); l.lcd_write_char(ICN_DOWN)
-	l.lcd_display_string_pos(f'{(netdown/1024)/REFRESH_DELAY:.4f}',2,10)
-	l.lcd_write(0x80+0x40+0xf); l.lcd_write_char(ICN_PERSEC)
-	l.lcd_display_string_pos("K",2,14)
+def print_network_usage(tx, rx):
+	l.lcd_write(LCD_LINE[1]+4); l.lcd_write_char(ID_UP)
+	l.lcd_display_string_pos(f'{(tx/1024)/REFRESH_DELAY:.4f}',2, 5)
+	l.lcd_write(LCD_LINE[1]+10); l.lcd_write_char(ID_DOWN)
+	l.lcd_display_string_pos(f'{(rx/1024)/REFRESH_DELAY:.4f}',2,11)
+
+
+def print_clock(line=0, pos=0):
+	l.lcd_write(LCD_LINE[line]+pos); l.lcd_write_char(ID_CLOCK)
+	l.lcd_display_string_pos(strftime("%m-%d %H:%M:%S", localtime()),line+1,pos+1)
 
 
 def print_thermal():
 	with open('/sys/class/thermal/thermal_zone0/temp', 'r') as ft:
 		temp = round(int(ft.read())/1000);
 	l.lcd_display_string_pos(f'{temp:2d}',2,0)
-	l.lcd_write(0x80+0x40+0x2); l.lcd_write_char(ICN_DEGC)
-
+	l.lcd_write(LCD_LINE[1]+2); l.lcd_write_char(ID_DEGC)
 
 def main():
-	netusage_old_down, netusage_old_up = 0,0;
+	cycle = 0
+	netinterface = None
+
 	while True:
-		avail_wifi = False
-		try:
-			ip_wifi = ni.ifaddresses('wlan0')[ni.AF_INET][0]['addr']
-			avail_wifi = True
-		except:
-			pass
-		avail_lan = False
-		try:
-			ip_lan = ni.ifaddresses('eth0')[ni.AF_INET][0]['addr']
-			avail_lan = True
-		except:
-			pass
-		if avail_lan:
-			l.lcd_write(0x80+0x00+0x0);	l.lcd_write_char(ICN_LAN)
-			l.lcd_display_string_pos(ip_lan+"        ",1,1)
-			netusage_now_down, netusage_now_up = get_network_usage('eth0')
-			print_network_usage(netusage_now_up - netusage_old_up, netusage_now_down - netusage_old_down)
-			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
-		elif avail_wifi:
-			l.lcd_write(0x80+0x00+0x0); l.lcd_write_char(ICN_WIFI)
-			l.lcd_display_string_pos(ip_wifi+"        ",1,1)
-			netusage_now_down, netusage_now_up = get_network_usage('wlan0')
-			print_network_usage(netusage_now_up - netusage_old_up, netusage_now_down - netusage_old_down)
-			netusage_old_down, netusage_old_up = netusage_now_down, netusage_now_up
+		wifi0 = get_network_avail('wlan0')
+		wifi1 = get_network_avail('wlan1')
+		lan = get_network_avail('eth0')
+
+		if lan == None and wifi1 == None and wifi0 == None:
+			l.lcd_write(LCD_LINE[1]+4); l.lcd_write_char(ID_WIFI)
+			l.lcd_write(LCD_LINE[1]+5); l.lcd_write_char(ID_LAN)
+			l.lcd_display_string_pos("not cnct'ed",2,2)
 		else:
-			l.lcd_write(0x80+0x00+0x0); l.lcd_write_char(ICN_WIFI)
-			l.lcd_display_string_pos("NOCONN ",1,1)
-			l.lcd_write(0x80+0x00+0x8); l.lcd_write_char(ICN_LAN)
-			l.lcd_display_string_pos("NOCONN ",1,9)
-			l.lcd_display_string_pos("            ",2,4)
+			if lan != None:
+				netinterface, ip = ID_LAN, lan
+				tx, rx = get_network_usage('eth0')
+			elif wifi1 != None:
+				netinterface, ip = ID_WUSB, wifi1
+				tx, rx = get_network_usage('wlan1')
+			elif wifi0 != None:
+				netinterface, ip = ID_WIFI, wifi0
+				tx, rx = get_network_usage('wlan0')
+			
+			print_network_usage(tx, rx)
+			if cycle < CYCLE_CLOCK:
+				# print clock
+				print_clock()
+			elif cycle < CYCLE_IP:
+				# print IP
+				print_network_ip(netinterface, ip)
+			cycle += 1
+			if cycle >= CYCLE_END:
+				cycle = 0
+			
 		print_thermal()
 		sleep(REFRESH_DELAY)
 
@@ -108,9 +134,11 @@ if __name__ == '__main__':
 		pass
 	finally:
 		l.lcd_clear()
-		l.lcd_display_string_pos("! Updater script",1,0)
+		l.lcd_display_string_pos("! Update script",1,0)
 		l.lcd_display_string_pos("  terminated",2,0)
-		sleep(1)
-		l.lcd_clear()
+		for i in range(2):
+			l.backlight(0)
+			sleep(0.5)
+			l.backlight(1)
+			sleep(0.5)
 		l.backlight(0)
-
