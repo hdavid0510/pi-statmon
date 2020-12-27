@@ -10,6 +10,7 @@ REFRESH_DELAY = 0.7
 CYCLE_CLOCK = 4
 CYCLE_IP = 7
 CYCLE_END = 7
+PSTFX_THSHD = 8*1024**2 # 8Mbps = 1MB/s
 
 l = RPi_I2C_driver.lcd(0x27,16,2)
 l.lcd_clear()
@@ -72,14 +73,14 @@ def print_network_ip(netinterface, ip):
 
 def print_network_usage(tx, rx):
 	l.lcd_write(LCD_LINE[1]+4); 
-	if tx > 10000:
+	if tx > PSTFX_THSHD:
 		l.lcd_write_char(ID_UP_M)
 		l.lcd_display_string_pos(f'{(tx/1024**2)/REFRESH_DELAY:.4f}',2, 5)
 	else:
 		l.lcd_write_char(ID_UP_K)
 		l.lcd_display_string_pos(f'{(tx/1024)/REFRESH_DELAY:.4f}',2, 5)
 	l.lcd_write(LCD_LINE[1]+10);
-	if rx > 10000:
+	if rx > PSTFX_THSHD:
 		l.lcd_write_char(ID_DOWN_M)
 		l.lcd_display_string_pos(f'{(rx/1024**2)/REFRESH_DELAY:.4f}',2,11)
 	else:
