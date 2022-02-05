@@ -21,7 +21,7 @@ sudo apt upgrade -y
 
 
 echotitle "Installing dependencies"
-sudo apt install python3-pip -y
+sudo apt install python3-pip python3-smbus -y
 sudo -H pip3 install psutil
 
 
